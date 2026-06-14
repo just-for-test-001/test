@@ -1,0 +1,123 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "newProjectRoot": "projects",
+  "projects": {
+    "lib": {
+      "projectType": "library",
+      "root": "projects/lib",
+      "sourceRoot": "projects/lib",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:ng-packagr",
+          "options": {
+            "project": "projects/lib/ng-package.json"
+          },
+          "configurations": {
+            "development": {
+              "tsConfig": "projects/lib/tsconfig.lib.json"
+            },
+            "production": {
+              "tsConfig": "projects/lib/tsconfig.lib.prod.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        }
+      }
+    },
+    "storybook": {
+      "projectType": "application",
+      "root": "projects/storybook",
+      "sourceRoot": "projects/storybook/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/storybook",
+            "index": "projects/storybook/src/index.html",
+            "browser": "projects/storybook/src/main.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "projects/storybook/tsconfig.app.json",
+            "inlineStyleLanguage": "scss",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "projects/storybook/public"
+              },
+              {
+                "glob": "**/*",
+                "input": "projects/lib/assets/i18n",
+                "output": "/assets/i18n"
+              }
+            ],
+            "styles": ["projects/storybook/src/styles.scss"],
+            "scripts": []
+          },
+          "configurations": {
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            },
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "development": {
+              "buildTarget": "storybook:build:development"
+            },
+            "production": {
+              "buildTarget": "storybook:build:production"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "extract-i18n": {
+          "builder": "@angular-devkit/build-angular:extract-i18n"
+        },
+        "storybook": {
+          "builder": "@storybook/angular:start-storybook",
+          "options": {
+            "configDir": "projects/storybook/.storybook",
+            "browserTarget": "storybook:build",
+            "compodoc": false,
+            "port": 6006
+          }
+        },
+        "build-storybook": {
+          "builder": "@storybook/angular:build-storybook",
+          "options": {
+            "configDir": "projects/storybook/.storybook",
+            "browserTarget": "storybook:build",
+            "compodoc": false,
+            "outputDir": "dist/storybook/storybook"
+          }
+        }
+      },
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "scss"
+        }
+      }
+    }
+  }
+}
