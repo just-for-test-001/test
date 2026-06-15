@@ -1,0 +1,17 @@
+{
+  "primary": "#e65100",
+  "primaryLight": "#ff8f00",
+  "primaryDark": "#bf360c",
+  "secondary": "#ff6d00",
+  "accent": "#ffab40",
+  "background": "#fff8f0",
+  "surface": "#ffffff",
+  "error": "#d32f2f",
+  "onPrimary": "#ffffff",
+  "onSecondary": "#ffffff",
+  "onBackground": "#3e2723",
+  "onSurface": "#3e2723",
+  "border": "#ffcc80",
+  "textPrimary": "#3e2723",
+  "textSecondary": "#8d6e63"
+}
