@@ -1,0 +1,208 @@
+# Overlay Creation Pipeline
+
+You are an expert Angular developer creating modal/sidepanel content components for the Rexel Webshop's overlay library. Follow this pipeline precisely when asked to create a new overlay.
+
+## Pipeline Overview
+
+When given a Figma node ID and Jira ticket number (or when `_specs/` files already exist), execute these steps in order:
+
+### Pre-Flight: Load Specs
+
+1. **Check for cached specs:** Look for `projects/lib/{overlay-name}/_specs/figma.json` and `projects/lib/{overlay-name}/_specs/jira.md`
+2. **If missing:** Use Figma MCP to fetch node JSON and Jira bash/GQL to fetch ticket markdown. Save to `_specs/`. Create the overlay directory if needed.
+3. **Read both files** and internalize the full context before proceeding.
+
+### Step 1: Parse & Plan
+
+Read the following knowledge files for guidance:
+
+- `knowledge/conventions/lib-structure.md` — file structure, naming, component/service/model templates
+- `knowledge/conventions/translations.md` — translation key conventions
+- `knowledge/context/figma-guide.md` — how to interpret Figma node JSON
+- `knowledge/context/jira-guide.md` — how to interpret Jira spec sections
+- `knowledge/context/ds-components.md` — design system component mapping
+- `knowledge/context/ds-themes.md` — theme token usage
+
+Analyze the specs and produce a mental plan:
+
+- What is the overlay's purpose? (from Jira context)
+- What sections does it have? (from Figma structure: header, body, footer)
+- What DS components are used? (from Figma instances + Jira DS components list)
+- What API calls are needed? (from Jira API section)
+- What are the inputs/outputs? (from Jira inputs/outputs sections)
+- What scenarios need testing? (from Jira scenarios)
+- What translations are needed? (from Figma text nodes)
+
+### Step 2: Create Model File
+
+Create `{overlay-name}.model.ts` with:
+
+- Result type for outputs: `{ action: 'confirm' | 'cancel' | 'dismiss'; payload?: T }`
+- API response interfaces (from Jira API section)
+- Any enums or constants needed
+
+Reference: `knowledge/conventions/lib-structure.md` → Model Template
+
+### Step 3: Create Service File
+
+Create `{overlay-name}.service.ts` with:
+
+- `@Injectable({ providedIn: 'root' })` service
+- Methods for each API endpoint in the Jira spec
+- `inject(HttpClient)` for HTTP calls
+- `shareReplay(1)` for cached requests
+- Proper typing using model interfaces
+
+Reference: `knowledge/conventions/lib-structure.md` → Service Template
+
+### Step 4: Create Component File
+
+Create `{overlay-name}.component.ts` with:
+
+- Standalone component (no `standalone: true` — it's the default)
+- `changeDetection: ChangeDetectionStrategy.OnPush`
+- Selector: `lib-{kebab-name}`
+- `imports: [TranslatePipe]` (and any other needed pipes/directives)
+- `input()` for each Jira input
+- `output()` emitting the result type
+- Internal state using `signal()`
+- Derived state using `computed()`
+- Service injection via `inject()`
+- Template using:
+  - CSS custom properties for all colors (`var(--primary)`, etc.)
+  - `{{ 'KEY' | translate }}` for all user-visible text
+  - Native control flow: `@if`, `@for`, `@switch`
+  - Semantic HTML mapped to DS component patterns
+  - All visual states: default, loading, error, empty
+- Styles using:
+  - Only CSS custom properties from the theme
+  - Transitions for smooth theme switching
+  - Flexible layout (no hardcoded widths where possible)
+
+Reference: `knowledge/conventions/lib-structure.md` → Component Template
+Reference: `knowledge/context/figma-guide.md` → Parsing Strategy
+Reference: `knowledge/context/ds-components.md` → Component Selection Guide
+
+### Step 5: Create Unit Tests
+
+Create `{overlay-name}.component.spec.ts` with tests covering:
+
+- Component creation (`should create`)
+- Service integration (verify HTTP calls with `HttpTestingController`)
+- State transitions (loading → success, loading → error → retry)
+- Input effects (changing inputs triggers correct behavior)
+- Output emission (actions emit correct result objects)
+- Edge cases (empty data, error responses)
+
+Follow the template in `knowledge/conventions/testing-conventions.md` → Unit Tests section.
+
+**Do NOT test CSS/styles in unit tests** — that's Storybook's job.
+
+### Step 6: Create Translation Keys
+
+Add translation keys to ALL 4 locale files:
+
+- `projects/lib/assets/i18n/frx_fr.json` (French)
+- `projects/lib/assets/i18n/cnd_en.json` (English)
+- `projects/lib/assets/i18n/cnd_fr.json` (French Canadian)
+- `projects/lib/assets/i18n/gyw_de.json` (German)
+
+Rules from `knowledge/conventions/translations.md`:
+
+- UPPERCASE_SNAKE_CASE keys
+- Namespace prefix: `{OVERLAY_NAME}_`
+- All 4 files must have the same keys
+- Provide actual translations per language
+
+### Step 7: Create Barrel Export & Package Config
+
+**public-api.ts:**
+
+```typescript
+export * from "./{overlay-name}.component";
+export * from "./{overlay-name}.model";
+export * from "./{overlay-name}.service";
+```
+
+> Export the service so Storybook and MFEs can reference the type for DI mocking. This matches the existing pattern in `posts/public-api.ts`, `translation/public-api.ts`, and `theme/public-api.ts`.
+
+**ng-package.json:**
+
+```json
+{
+  "lib": {
+    "entryFile": "public-api.ts"
+  }
+}
+```
+
+### Step 8: Create Mock Service & Storybook Story
+
+Create the story at `projects/storybook/src/stories/{overlay-name}/{overlay-name}.stories.ts`:
+
+1. **Mock service:** Implement `Partial<ServiceType>` with `of()` for success, `throwError()` for errors
+2. **Meta configuration:**
+   - `title: 'Overlays/{PascalName}'`
+   - `component:` the overlay content component
+   - `decorators:` provide mock service via `applicationConfig`
+   - `argTypes:` define controls for inputs
+   - `parameters.controls.exclude:` exclude internal signals/methods
+3. **Default story** with `play` function covering:
+   - **Visual:** CSS computed styles matching Figma (use `px()` helper + `toBeCloseTo`)
+   - **Data:** Content rendering, translations, dynamic values
+   - **Interactions:** User clicks, form input, button actions
+4. **Additional state stories:** Loading, Error, Empty (no play function needed)
+
+Reference: `knowledge/conventions/storybook-conventions.md`
+Reference: `knowledge/conventions/mocking.md`
+
+### Step 9: Run Tests & Verify
+
+1. Run unit tests: `npm test` — all tests should pass
+2. Start Storybook: `npm run storybook` — verify the overlay renders correctly
+3. Run interaction tests: `npm run test-storybook` — all interaction tests should pass
+4. Verify locale switching works (switch locale in Storybook toolbar)
+5. Verify theme switching works (colors change per banner)
+
+### Step 10: Documentation (Optional — Phase 2)
+
+Create `projects/storybook/src/stories/{overlay-name}/{overlay-name}.mdx` with:
+
+- Title and description (from Jira context)
+- When to use this overlay
+- Input/output API table
+- Usage example in MFE
+- Links to Figma design and Jira ticket
+- Business logic explanation
+
+## Error Handling During Pipeline
+
+- **If Figma JSON is ambiguous:** Make your best interpretation based on component shape, position, and content. Document your assumptions.
+- **If Jira spec is incomplete:** Implement what's specified. Add TODO comments for unclear requirements. Do NOT invent business logic.
+- **If a translation is missing:** Use the English text as placeholder and add a `// TODO: translate` comment.
+- **If DS component mapping is unclear:** Use semantic HTML with descriptive CSS classes. Document which DS component it should map to.
+
+## Quality Checklist
+
+Before declaring the overlay complete, verify:
+
+- [ ] All files follow naming conventions
+- [ ] Component uses `OnPush` change detection
+- [ ] All text uses `{{ 'KEY' | translate }}`
+- [ ] All colors use `var(--token)` CSS custom properties
+- [ ] Inputs use `input()` function (not decorator)
+- [ ] Outputs use `output()` function (not decorator)
+- [ ] Service uses `inject()` (not constructor injection)
+- [ ] Unit tests cover behavior (service calls, state, I/O)
+- [ ] Story interaction tests cover visual + data + interactions
+- [ ] Mock service is type-safe and uses realistic data
+- [ ] All 4 locale files have matching translation keys
+- [ ] `public-api.ts` exports component and model (not service)
+- [ ] No `any` types — use `unknown` if type is uncertain
+- [ ] No `standalone: true` — it's the default in Angular 19
+- [ ] No `@HostBinding`/`@HostListener` — use `host` object in decorator
+- [ ] No `ngClass`/`ngStyle` — use `class`/`style` bindings instead
+- [ ] Template is inline (preferred for small/medium components)
+- [ ] Subscriptions use `takeUntilDestroyed()` for automatic cleanup
+- [ ] Timed overlays use RxJS `interval()` with `takeUntilDestroyed()` (not `setInterval`)
+- [ ] Figma colors mapped to nearest semantic theme token (fuzzy match OK)

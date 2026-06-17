@@ -1,4 +1,5 @@
 import { type Meta, type StoryObj } from '@storybook/angular';
+import { expect } from 'storybook/test';
 
 import { ModalOneComponent } from '../../../lib/modal-one/public-api';
 
@@ -10,4 +11,9 @@ const meta: Meta<ModalOneComponent> = {
 export default meta;
 type Story = StoryObj<ModalOneComponent>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const test = 'Test';
+    expect(test).toBe('Test');
+  },
+};
